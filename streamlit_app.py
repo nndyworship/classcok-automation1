@@ -39,59 +39,55 @@ CLASSCOK_URL = "https://sas.classkok.com"
 col_left, col_right = st.columns([6, 4], gap="small")
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ◀ 왼쪽: 클래스콕 운영시스템
+# ◀ 왼쪽: 클래스콕 바로가기 + 실행 로그 모니터링
 # ═══════════════════════════════════════════════════════════════════════════
 with col_left:
-    st.markdown("#### 🖥️ 클래스콕 운영시스템")
-    # iframe 시도 — 클래스콕이 X-Frame-Options로 차단하면 fallback 메시지 표시
-    components.html(
+    # 클래스콕 바로가기 버튼
+    st.markdown(
         f"""
-        <style>
-          #wrap {{ position: relative; width: 100%; height: 88vh; }}
-          #cf {{ width: 100%; height: 100%; border: none; border-radius: 8px; background: #f8f9fa; }}
-          #fallback {{
-            display: none; position: absolute; inset: 0;
-            background: #f8f9fa; border-radius: 8px;
-            align-items: center; justify-content: center;
-            flex-direction: column; gap: 12px; text-align: center;
-            font-family: sans-serif; color: #333;
-          }}
-          #cf:empty + #fallback {{ display: flex; }}
-        </style>
-        <div id="wrap">
-          <iframe id="cf" src="{CLASSCOK_URL}"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-            onerror="document.getElementById('fallback').style.display='flex'">
-          </iframe>
-          <div id="fallback">
-            <div style="font-size:48px">🔒</div>
-            <div style="font-size:16px;font-weight:bold">클래스콕이 외부 임베드를 차단합니다</div>
-            <div style="font-size:13px;color:#666">아래 버튼으로 새 탭에서 여세요</div>
-            <a href="{CLASSCOK_URL}" target="_blank"
-              style="background:#4361ee;color:white;padding:10px 24px;border-radius:6px;
-                     text-decoration:none;font-weight:bold;font-size:14px">
-              클래스콕 열기 ↗
-            </a>
-          </div>
-        </div>
-        <script>
-          var f = document.getElementById('cf');
-          f.onload = function() {{
-            try {{
-              var d = f.contentDocument || f.contentWindow.document;
-              if (!d || d.URL === 'about:blank') throw 'blocked';
-            }} catch(e) {{
-              document.getElementById('fallback').style.display = 'flex';
-            }}
-          }};
-          f.onerror = function() {{
-            document.getElementById('fallback').style.display = 'flex';
-          }};
-        </script>
+        <a href="{CLASSCOK_URL}" target="_blank" style="
+            display: block; width: 100%; padding: 14px;
+            background: #4361ee; color: white; text-align: center;
+            border-radius: 8px; text-decoration: none;
+            font-size: 16px; font-weight: bold; margin-bottom: 16px;">
+            🖥️ 클래스콕 운영시스템 열기 ↗
+        </a>
         """,
-        height=700,
-        scrolling=False,
+        unsafe_allow_html=True,
     )
+
+    st.markdown("#### 📋 실행 로그 모니터링")
+
+    # 최근 실행 목록 (Firebase)
+    recent_logs = fb.get_recent_runs(BRANCH_ID, limit=5) if hasattr(fb, "get_recent_runs") else []
+
+    if recent_logs:
+        for run in recent_logs:
+            status_icon = {"triggered": "🟡", "running": "🔵", "done": "✅", "error": "❌"}.get(
+                run.get("status", ""), "⚪"
+            )
+            with st.expander(
+                f"{status_icon} {run.get('run_id', '')} — {run.get('month', '')}",
+                expanded=run.get("status") in ("triggered", "running"),
+            ):
+                log_stream.render(run["run_id"])
+    else:
+        # 현재 세션 run_id가 있으면 바로 표시
+        cur_run = st.session_state.get("run_id", "")
+        if cur_run:
+            if st.session_state.get("running"):
+                st_autorefresh(interval=2000, key="left_log_refresh")
+            log_stream.render(cur_run)
+        else:
+            st.info("등록 실행 후 진행 로그가 여기에 실시간으로 표시됩니다.", icon="📋")
+            st.markdown("""
+            **자동화 흐름 안내**
+            1. 오른쪽 패널에서 Excel 업로드 → 강사 선택
+            2. 🚀 등록 실행 버튼 클릭
+            3. GitHub Actions가 자동으로 클래스콕에 강좌 등록
+            4. 이 화면에서 진행 상황 실시간 확인
+            5. 완료 후 위 버튼으로 클래스콕에서 결과 확인
+            """)
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ▶ 오른쪽: 자동 등록 컨트롤 패널
@@ -215,15 +211,9 @@ with col_right:
             st.session_state["run_id"] = ""
             st.rerun()
 
-    # 로그 스트림
     run_id = st.session_state.get("run_id", "")
     if run_id:
-        if st.session_state.get("running"):
-            st_autorefresh(interval=2000, key="log_refresh")
-        st.caption(f"Run ID: `{run_id}`")
-        log_stream.render(run_id)
-    else:
-        st.caption("실행 후 진행 로그가 여기에 표시됩니다.")
+        st.caption(f"Run ID: `{run_id}` — 왼쪽 패널에서 로그 확인")
 
     # SMS 인증 팝업
     if st.session_state.get("session_expired"):
