@@ -224,3 +224,63 @@ def set_run_status(run_id: str, status: str, branch_id: str = "", target_month: 
             "target_month": target_month,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }, merge=True)
+
+
+# ── 등록 양식 템플릿 저장/조회 ─────────────────────────────────────────────
+
+_TEMPLATE_LOCAL = Path("data/form_templates.json")
+
+
+def save_form_template(branch_id: str, template_name: str, data: dict) -> None:
+    """등록 양식을 이름으로 저장한다."""
+    now = datetime.now(timezone.utc).isoformat()
+    payload = {**data, "template_name": template_name, "saved_at": now}
+    if _is_online():
+        _db.collection("branches").document(branch_id)\
+           .collection("form_templates").document(template_name).set(payload)
+    else:
+        templates = _load_local_templates()
+        templates[template_name] = payload
+        _TEMPLATE_LOCAL.parent.mkdir(parents=True, exist_ok=True)
+        _TEMPLATE_LOCAL.write_text(json.dumps(templates, ensure_ascii=False, indent=2))
+
+
+def list_form_templates(branch_id: str) -> list[dict]:
+    """저장된 등록 양식 목록을 최신순으로 반환한다."""
+    if _is_online():
+        docs = _db.collection("branches").document(branch_id)\
+                   .collection("form_templates")\
+                   .order_by("saved_at", direction="DESCENDING").stream()
+        return [d.to_dict() for d in docs]
+    templates = _load_local_templates()
+    return sorted(templates.values(), key=lambda x: x.get("saved_at", ""), reverse=True)
+
+
+def load_form_template(branch_id: str, template_name: str) -> dict | None:
+    """이름으로 등록 양식을 불러온다."""
+    if _is_online():
+        doc = _db.collection("branches").document(branch_id)\
+                  .collection("form_templates").document(template_name).get()
+        return doc.to_dict() if doc.exists else None
+    templates = _load_local_templates()
+    return templates.get(template_name)
+
+
+def delete_form_template(branch_id: str, template_name: str) -> None:
+    """저장된 등록 양식을 삭제한다."""
+    if _is_online():
+        _db.collection("branches").document(branch_id)\
+           .collection("form_templates").document(template_name).delete()
+    else:
+        templates = _load_local_templates()
+        templates.pop(template_name, None)
+        _TEMPLATE_LOCAL.write_text(json.dumps(templates, ensure_ascii=False, indent=2))
+
+
+def _load_local_templates() -> dict:
+    if _TEMPLATE_LOCAL.exists():
+        try:
+            return json.loads(_TEMPLATE_LOCAL.read_text())
+        except Exception:
+            return {}
+    return {}
