@@ -41,7 +41,7 @@ with st.sidebar:
     uploaded = st.file_uploader("📂 Excel 파일 업로드", type=["xlsx"], key="excel_file")
     st.caption("강사별 수업주제 최종.xlsx")
     st.divider()
-    st.page_link("src/pages/04_settings.py", label="⚙️ 강사 설정", icon="⚙️")
+    st.page_link("pages/04_settings.py", label="⚙️ 강사 설정", icon="⚙️")
     st.caption("v0.5.0 — T5 대시보드 구현")
 
 # ── 상태 초기화 ─────────────────────────────────────────────────────────────
