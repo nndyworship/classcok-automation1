@@ -13,6 +13,7 @@ from pathlib import Path
 from playwright.async_api import async_playwright, BrowserContext
 
 from src.utils import firebase_client as fb
+from src.utils.screenshot_uploader import upload_screenshot
 from engine.bot.login_handler import ensure_logged_in
 from engine.bot.form_filler import register_month
 from engine.parser import excel_parser
@@ -77,6 +78,18 @@ async def run(
             await context.close()
             return {"success": [], "failed": [i.get("instructor_id") for i in instructors], "status": "failed"}
 
+        # 로그인 후 스크린샷
+        _page = await context.new_page()
+        try:
+            await _page.goto("https://sas.classkok.com", timeout=15000)
+            shot = await _page.screenshot(full_page=False)
+            url = upload_screenshot(shot, run_id, "login_done")
+            fb.append_log(run_id, "로그인 완료 — 클래스콕 진입", "success", url)
+        except Exception:
+            fb.append_log(run_id, "로그인 완료", "success")
+        finally:
+            await _page.close()
+
         for inst in instructors:
             inst_id = inst.get("instructor_id", "")
             inst_name = inst.get("name", inst_id)
@@ -91,6 +104,15 @@ async def run(
 
                 page = await context.new_page()
                 results = await register_month(page, inst, month_data, split, run_id)
+
+                # 강사 등록 완료 스크린샷
+                try:
+                    shot = await page.screenshot(full_page=False)
+                    url = upload_screenshot(shot, run_id, f"{inst_id}_done")
+                    fb.append_log(run_id, f"{inst_name} 등록 화면", "info", url)
+                except Exception:
+                    pass
+
                 await page.close()
 
                 all_ok = all(results.values())
@@ -103,8 +125,16 @@ async def run(
                     fb.append_log(run_id, f"{inst_name} 일부 실패: {failed_weeks}주", "error")
 
             except Exception as e:
+                # 오류 시 스크린샷
+                try:
+                    ep = await context.new_page()
+                    shot = await ep.screenshot(full_page=False)
+                    url = upload_screenshot(shot, run_id, f"{inst_id}_error")
+                    fb.append_log(run_id, f"{inst_name} 오류: {e}", "error", url)
+                    await ep.close()
+                except Exception:
+                    fb.append_log(run_id, f"{inst_name} 오류: {e}", "error")
                 failed_list.append(inst_id)
-                fb.append_log(run_id, f"{inst_name} 오류: {e}", "error")
 
         await context.close()
 

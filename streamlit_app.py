@@ -56,38 +56,37 @@ with col_left:
         unsafe_allow_html=True,
     )
 
-    st.markdown("#### 📋 실행 로그 모니터링")
+    cur_run = st.session_state.get("run_id", "")
+    is_running = st.session_state.get("running", False)
 
-    # 최근 실행 목록 (Firebase)
-    recent_logs = fb.get_recent_runs(BRANCH_ID, limit=5) if hasattr(fb, "get_recent_runs") else []
+    if is_running:
+        st_autorefresh(interval=3000, key="left_log_refresh")
 
-    if recent_logs:
-        for run in recent_logs:
-            status_icon = {"triggered": "🟡", "running": "🔵", "done": "✅", "error": "❌"}.get(
-                run.get("status", ""), "⚪"
-            )
-            with st.expander(
-                f"{status_icon} {run.get('run_id', '')} — {run.get('month', '')}",
-                expanded=run.get("status") in ("triggered", "running"),
-            ):
-                log_stream.render(run["run_id"])
-    else:
-        # 현재 세션 run_id가 있으면 바로 표시
-        cur_run = st.session_state.get("run_id", "")
-        if cur_run:
-            if st.session_state.get("running"):
-                st_autorefresh(interval=2000, key="left_log_refresh")
+    if cur_run:
+        st.markdown("#### 📋 실행 로그 + 실시간 화면")
+        st.caption(f"Run ID: `{cur_run}`")
+
+        # 스크린샷 피드 — screenshot_url이 있는 로그만 추출해 최신 1장 크게 표시
+        logs = fb.get_logs(cur_run)
+        shot_logs = [l for l in logs if l.get("screenshot_url")]
+        if shot_logs:
+            latest = shot_logs[-1]
+            st.image(latest["screenshot_url"], caption="최신 화면 (자동 갱신)", use_container_width=True)
+
+        # 전체 로그 텍스트
+        with st.expander("전체 로그 보기", expanded=not shot_logs):
             log_stream.render(cur_run)
-        else:
-            st.info("등록 실행 후 진행 로그가 여기에 실시간으로 표시됩니다.", icon="📋")
-            st.markdown("""
-            **자동화 흐름 안내**
-            1. 오른쪽 패널에서 Excel 업로드 → 강사 선택
-            2. 🚀 등록 실행 버튼 클릭
-            3. GitHub Actions가 자동으로 클래스콕에 강좌 등록
-            4. 이 화면에서 진행 상황 실시간 확인
-            5. 완료 후 위 버튼으로 클래스콕에서 결과 확인
-            """)
+    else:
+        st.markdown("#### 📋 실행 로그 모니터링")
+        st.info("등록 실행 후 진행 로그와 클래스콕 화면이 실시간으로 여기에 표시됩니다.", icon="📋")
+        st.markdown("""
+**자동화 흐름 안내**
+1. 오른쪽에서 Excel 업로드 → 강사 선택
+2. 🚀 등록 실행 클릭
+3. GitHub Actions가 클래스콕에 자동 등록
+4. **이 화면에서 클래스콕 화면 실시간 확인** (3초 간격 갱신)
+5. 완료 후 위 버튼으로 클래스콕에서 최종 확인
+        """)
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ▶ 오른쪽: 자동 등록 컨트롤 패널
