@@ -22,7 +22,7 @@ fb.init()
 
 # ── 사이드바 ────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.image("https://placehold.co/200x60/4361ee/white?text=KidsWaffle", use_container_width=True)
+    st.image("https://placehold.co/200x60/4361ee/white?text=KidsWaffle", width=200)
     st.header("등록 설정")
 
     branch = st.selectbox("지점 선택", ["동탄본점"], key="branch")
@@ -145,7 +145,7 @@ with col_btn:
     disabled = len(selected_ids) == 0 or st.session_state.get("running", False)
     btn_label = "⏳ 실행 중..." if st.session_state.get("running", False) else "🚀 등록 실행"
 
-    if st.button(btn_label, type="primary", disabled=disabled, use_container_width=True):
+    if st.button(btn_label, type="primary", disabled=disabled, use_container_width=True):  # noqa: streamlit-compat
         run_id = fb.new_run_id()
         st.session_state["run_id"] = run_id
         st.session_state["running"] = True
