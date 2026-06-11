@@ -1,0 +1,50 @@
+# ── 환경변수 / 보안 ────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.streamlit/secrets.toml
+class_config.json
+cookies.json
+firebase-adminsdk-*.json
+*-service-account.json
+google-credentials.json
+
+# ── 임시 파일 / 데이터 ────────────────────────────────
+/tmp/*
+!/tmp/.gitkeep
+/data/*
+!/data/.gitkeep
+
+# ── Python ────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Playwright ────────────────────────────────────────
+playwright-report/
+test-results/
+
+# ── OS ────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+Thumbs.db
+._*
+
+# ── IDE ───────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Logs ──────────────────────────────────────────────
+*.log
+logs/

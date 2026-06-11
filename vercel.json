@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/*.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/status",
+      "dest": "/api/status.py"
+    },
+    {
+      "src": "/api/trigger",
+      "dest": "/api/trigger.py"
+    },
+    {
+      "src": "/api/log",
+      "dest": "/api/log.py"
+    }
+  ],
+  "env": {
+    "FIREBASE_PROJECT_ID": "@firebase_project_id",
+    "FIREBASE_PRIVATE_KEY": "@firebase_private_key",
+    "FIREBASE_CLIENT_EMAIL": "@firebase_client_email",
+    "CLOUDINARY_CLOUD_NAME": "@cloudinary_cloud_name",
+    "CLOUDINARY_API_KEY": "@cloudinary_api_key",
+    "CLOUDINARY_API_SECRET": "@cloudinary_api_secret",
+    "GITHUB_PAT": "@github_pat",
+    "GITHUB_REPO_OWNER": "@github_repo_owner",
+    "GITHUB_REPO_NAME": "@github_repo_name",
+    "ANTHROPIC_API_KEY": "@anthropic_api_key",
+    "SESSION_ENCRYPT_KEY": "@session_encrypt_key"
+  },
+  "functions": {
+    "api/*.py": {
+      "maxDuration": 10
+    }
+  }
+}

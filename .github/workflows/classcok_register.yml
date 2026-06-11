@@ -1,0 +1,95 @@
+name: 클래스콕 강좌 자동 등록
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch_id:
+        description: '지점 코드 (예: dongtan)'
+        required: true
+        default: 'dongtan'
+      target_month:
+        description: '등록 월 (YYYY-MM, 예: 2026-07)'
+        required: true
+      instructor_ids:
+        description: '강사 ID 목록 (쉼표 구분, 비우면 전체)'
+        required: false
+        default: ''
+      run_id:
+        description: '로그 추적용 Run ID (대시보드에서 자동 생성)'
+        required: false
+        default: ''
+
+concurrency:
+  group: classcok-${{ github.event.inputs.branch_id }}
+  cancel-in-progress: false   # 진행 중 요청은 취소하지 않고 큐잉
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 패키지 설치
+        run: pip install -r requirements.txt
+
+      - name: Playwright Chromium 설치
+        run: playwright install chromium --with-deps
+
+      - name: Excel 파일 존재 확인
+        run: |
+          if [ -z "$(ls data/*.xlsx 2>/dev/null)" ]; then
+            echo "::error::data/ 폴더에 Excel 파일이 없습니다. 파일을 업로드하거나 경로를 확인하세요."
+            exit 1
+          fi
+          echo "Excel 파일 확인: $(ls data/*.xlsx)"
+
+      - name: 강좌 자동 등록 실행
+        id: bot_run
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+          FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SESSION_ENCRYPT_KEY: ${{ secrets.SESSION_ENCRYPT_KEY }}
+          CLASSCOK_ID: ${{ secrets.CLASSCOK_ID }}
+          CLASSCOK_PW: ${{ secrets.CLASSCOK_PW }}
+          HOLIDAY_API_KEY: ${{ secrets.HOLIDAY_API_KEY }}
+        run: |
+          python engine/bot/run_local.py --headless \
+            --branch "${{ github.event.inputs.branch_id }}" \
+            --month "${{ github.event.inputs.target_month }}" \
+            --instructors "${{ github.event.inputs.instructor_ids }}"
+        continue-on-error: true
+
+      - name: 실행 결과 요약
+        if: always()
+        run: |
+          if [ "${{ steps.bot_run.outcome }}" == "success" ]; then
+            echo "## ✅ 등록 완료" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ❌ 등록 실패 또는 일부 오류" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- 지점: ${{ github.event.inputs.branch_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 등록 월: ${{ github.event.inputs.target_month }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 실행 시각: $(date '+%Y-%m-%d %H:%M:%S KST')" >> $GITHUB_STEP_SUMMARY
+
+      - name: 스크린샷 아티팩트 업로드 (오류 발생 시)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-screenshots-${{ github.run_id }}
+          path: tmp/*.png
+          retention-days: 7
+          if-no-files-found: ignore
