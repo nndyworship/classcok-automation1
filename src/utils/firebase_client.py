@@ -39,9 +39,19 @@ def init() -> bool:
     if not _FIREBASE_AVAILABLE:
         return False
 
-    project_id = os.getenv("FIREBASE_PROJECT_ID")
-    private_key = os.getenv("FIREBASE_PRIVATE_KEY", "").replace("\\n", "\n")
-    client_email = os.getenv("FIREBASE_CLIENT_EMAIL")
+    def _s(key: str) -> str:
+        val = os.getenv(key, "")
+        if val:
+            return val
+        try:
+            import streamlit as st
+            return st.secrets.get(key, "")
+        except Exception:
+            return ""
+
+    project_id = _s("FIREBASE_PROJECT_ID")
+    private_key = _s("FIREBASE_PRIVATE_KEY").replace("\\n", "\n")
+    client_email = _s("FIREBASE_CLIENT_EMAIL")
 
     if not all([project_id, private_key, client_email]):
         return False

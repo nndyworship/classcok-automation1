@@ -9,6 +9,17 @@ from __future__ import annotations
 import os
 import requests
 
+def _secret(key: str, default: str = "") -> str:
+    """os.environ → st.secrets 순서로 시크릿 조회."""
+    val = os.getenv(key, "")
+    if val:
+        return val
+    try:
+        import streamlit as st
+        return st.secrets.get(key, default)
+    except Exception:
+        return default
+
 GITHUB_API = "https://api.github.com"
 TIMEOUT = 8
 
@@ -25,10 +36,10 @@ def trigger(
     Vercel 배포 환경에서는 /api/trigger 엔드포인트를 경유하고,
     로컬 환경에서는 GitHub API를 직접 호출한다.
     """
-    pat = os.getenv("GH_PAT") or os.getenv("GITHUB_PAT", "")
-    owner = os.getenv("GITHUB_REPO_OWNER", "")
-    repo = os.getenv("GITHUB_REPO_NAME", "classcok-automation")
-    vercel_url = os.getenv("VERCEL_API_URL", "")
+    pat = _secret("GH_PAT") or _secret("GITHUB_PAT")
+    owner = _secret("GITHUB_REPO_OWNER")
+    repo = _secret("GITHUB_REPO_NAME") or "classcok-automation1"
+    vercel_url = _secret("VERCEL_API_URL")
 
     # Vercel 배포 환경: /api/trigger 경유
     if vercel_url:
