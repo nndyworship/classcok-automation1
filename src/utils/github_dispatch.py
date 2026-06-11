@@ -25,7 +25,7 @@ def trigger(
     Vercel 배포 환경에서는 /api/trigger 엔드포인트를 경유하고,
     로컬 환경에서는 GitHub API를 직접 호출한다.
     """
-    pat = os.getenv("GITHUB_PAT", "")
+    pat = os.getenv("GH_PAT") or os.getenv("GITHUB_PAT", "")
     owner = os.getenv("GITHUB_REPO_OWNER", "")
     repo = os.getenv("GITHUB_REPO_NAME", "classcok-automation")
     vercel_url = os.getenv("VERCEL_API_URL", "")
@@ -38,7 +38,7 @@ def trigger(
     if not all([pat, owner]):
         return {
             "status": "stub",
-            "message": "GITHUB_PAT / GITHUB_REPO_OWNER 미설정 — 로컬 stub 모드",
+            "message": "GH_PAT / GITHUB_REPO_OWNER 미설정 — 로컬 stub 모드",
             "run_id": run_id,
         }
 
