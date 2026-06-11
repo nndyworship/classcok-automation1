@@ -33,7 +33,7 @@ fb.init()
 require("run_id", "")
 require("running", False)
 
-CLASSCOK_URL = "https://www.classcok.com/admin"
+CLASSCOK_URL = "https://sas.classkok.com"
 
 # ── 좌우 분할 레이아웃 ──────────────────────────────────────────────────────
 col_left, col_right = st.columns([6, 4], gap="small")
